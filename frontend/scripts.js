@@ -1,10 +1,11 @@
 const form = document.querySelector("form");
-const [title, description] = document.querySelectorAll("form .input")
+const [title, description, file] = document.querySelectorAll("form .input")
 const tbody = document.querySelector("table tbody");
 const list = []
 
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!title.value) {
         alert("عنوان اجباری است");
         return;
@@ -13,23 +14,55 @@ form.addEventListener("submit", async (e) => {
         alert("توضیحات اجباری است");
         return;
     }
-    const data = {
-        title: title.value,
-        description: description.value
-    }
-    const res = await fetch("http://localhost:3000/add", {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: {
-            "Content-Type": "application/json",
-            "accept": "application/json"
-        }
-    })
-    const result = await res.json();
-    addToTable(result.task)
+    // const data = {
+    //     title: title.value,
+    //     description: description.value
+    // }
+    // json method
+    // const res = await fetch("http://localhost:3000/add", {
+    //     method: "POST",
+    //     body: JSON.stringify(data),
+    //     headers: {
+    //         "Content-Type": "application/json",
+    //         "accept": "application/json"
+    //     }
+    // })
 
-    title.value = null
-    description.value = null
+    try {
+        const formData = new FormData()
+        formData.append('title', title.value)
+        formData.append('description', description.value);
+
+        if (file.files.length >= 1) {
+            formData.append('file', file.files[0]) // append selected file from input
+        }
+
+        const res = await fetch("http://localhost:3000/add", {
+            method: "POST",
+            body: formData,
+        })
+
+        const result = await res.json();
+        addToTable(result.task)
+
+        title.value = null
+        description.value = null
+        file.value = null
+        Swal.fire({
+            icon: "success",
+            title: "موفقیت آمیز",
+            text: "تسک شما با موفقیت اضافه شد",
+            confirmButtonText: "باشه"
+        });
+    } catch (err) {
+        Swal.fire({
+            icon: "error",
+            title: "مشکل",
+            text: "مشکلی در حین ارسال اطلاعات به وجود اومده",
+            confirmButtonText: "باشه"
+        });
+        console.log('err: ', err);
+    }
 })
 
 window.addEventListener('load', async () => {
@@ -57,13 +90,22 @@ function newRow(element) {
 
     const td0 = document.createElement('td')
     td0.innerHTML = list.length
+    td0.style = "padding:0 10px";
 
     const td1 = document.createElement('td')
     td1.innerHTML = element.title
 
     const td2 = document.createElement('td')
     td2.innerHTML = element.description
+
     const td3 = document.createElement('td')
+    if (element?.image) {
+        const image = document.createElement("img")
+        image.setAttribute('src', element.image)
+        image.style = "width:70px;height:70px";
+        td3.appendChild(image)
+    }
+
     const td4 = document.createElement('td')
 
     // if (element.done) {
@@ -133,7 +175,7 @@ async function done(e) {
             if (v.id === id) {
                 v.done = true
                 const tr = document.getElementById(id)
-                tr.children[3].innerHTML = "انجام شده"
+                tr.children[4].innerHTML = "انجام شده"
             }
         })
     }
